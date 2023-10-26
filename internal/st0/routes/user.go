@@ -20,11 +20,12 @@ func UsersRoutes(r *gin.Engine) {
 func getUser(c *gin.Context) {
 	userID := c.Param("id")
 	var user models.User
-	result := config.Db.First(&user, userID)
+	result := config.Db.Preload("UserSpace").First(&user, userID)
 	if result.Error != nil {
 		ex.BadRequest(c, result.Error)
 		return
 	}
+	user.StorageSize = user.StorageSize / (1024 * 1024)
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
@@ -51,7 +52,12 @@ func createUser(c *gin.Context) {
 func deleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	var user models.User
-	err := user.DeleteSpace()
+	data := config.Db.Preload("UserSpace").First(&user, userID)
+	if data.Error != nil {
+		ex.BadRequest(c, data.Error)
+		return
+	}
+	err := user.DeleteSpace(user.UserSpace.Path)
 	if err != nil {
 		ex.BadRequest(c, err)
 		return
@@ -61,5 +67,5 @@ func deleteUser(c *gin.Context) {
 		ex.BadRequest(c, result.Error)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusAccepted, gin.H{"message": "success"})
 }

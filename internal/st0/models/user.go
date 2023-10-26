@@ -15,7 +15,7 @@ type User struct {
 	Username    string  `gorm:"not null" json:"username" form:"username"`
 	Password    string  `gorm:"not null" json:"-" form:"password"`
 	StorageSize int     `gorm:"not null" json:"storageSize"`
-	UserSpace   Storage `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:UserID" json:"-"`
+	UserSpace   Storage `gorm:"constraint:OnDelete:CASCADE;foreignKey:UserID" json:"-"`
 }
 
 func NewUser(username string) (*User, error) {
@@ -68,8 +68,7 @@ func (u User) DeleteFile(fileName string) error {
 	return nil
 }
 
-func (u User) DeleteSpace() error {
-	filePath := u.UserSpace.Path
+func (u User) DeleteSpace(filePath string) error {
 	err := os.Remove(filePath)
 	if err != nil {
 		return err
