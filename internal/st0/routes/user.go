@@ -62,7 +62,7 @@ func deleteUser(c *gin.Context) {
 		ex.BadRequest(c, err)
 		return
 	}
-	result := config.Db.Delete(&user, userID)
+	result := config.Db.Unscoped().Delete(&user, userID)
 	if result.Error != nil {
 		ex.BadRequest(c, result.Error)
 		return
