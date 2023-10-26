@@ -12,13 +12,13 @@ const Path = "./storage/"
 
 type User struct {
 	gorm.Model
-	Username    string  `gorm:"not null" json:"username" form:"username"`
-	Password    string  `gorm:"not null" json:"-" form:"password"`
+	Username    string  `gorm:"not null" json:"username" form:"username" binding:"required"`
+	Password    string  `gorm:"not null" json:"-" form:"password" binding:"required"`
 	StorageSize int     `gorm:"not null" json:"storageSize"`
 	UserSpace   Storage `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:UserID" json:"-"`
 }
 
-func NewUser(username string) (*User, error) {
+func NewUser(username, password string) (*User, error) {
 	storageSizeInKb := 1024 * 1024 * 100
 	spaceName := username + "-space"
 	err := os.Mkdir(Path+spaceName, os.ModeDir)
@@ -27,6 +27,7 @@ func NewUser(username string) (*User, error) {
 	}
 	return &User{
 		Username:    username,
+		Password:    password,
 		StorageSize: storageSizeInKb,
 		UserSpace: Storage{
 			Name: spaceName,

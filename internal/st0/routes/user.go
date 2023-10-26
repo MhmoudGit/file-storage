@@ -32,11 +32,11 @@ func getUser(c *gin.Context) {
 func createUser(c *gin.Context) {
 	var user models.User
 	// Bind the request data to the user struct
-	if err := c.Bind(&user); err != nil {
+	if err := c.ShouldBind(&user); err != nil {
 		ex.BadRequest(c, err)
 		return
 	}
-	newUser, err := models.NewUser(user.Username)
+	newUser, err := models.NewUser(user.Username, user.Password)
 	if err != nil {
 		ex.BadRequest(c, err)
 		return
