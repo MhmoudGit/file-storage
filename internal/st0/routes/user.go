@@ -54,6 +54,7 @@ func deleteUser(c *gin.Context) {
 	err := user.DeleteSpace()
 	if err != nil {
 		ex.BadRequest(c, err)
+		return
 	}
 	result := config.Db.Delete(&user, userID)
 	if result.Error != nil {
