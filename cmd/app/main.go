@@ -13,6 +13,7 @@ func main() {
 
 	// define server
 	r := gin.Default()
+	r.MaxMultipartMemory = 8 << 20 // 8 MiB
 
 	// define routes
 	routes.UsersRoutes(r)

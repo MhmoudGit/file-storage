@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"path/filepath"
 
 	config "github.com/MhmoudGit/file-storage/internal/st0/configs"
 	ex "github.com/MhmoudGit/file-storage/internal/st0/exceptions"
@@ -15,8 +16,11 @@ func UsersRoutes(r *gin.Engine) {
 	users.POST("", createUser)
 	users.DELETE(":id", deleteUser)
 
+	// files
+	users.POST(":userID/files", createUserFiles)
 }
 
+// users controllers
 func getUser(c *gin.Context) {
 	userID := c.Param("id")
 	var user models.User
@@ -63,6 +67,56 @@ func deleteUser(c *gin.Context) {
 		return
 	}
 	result := config.Db.Unscoped().Delete(&user, userID)
+	if result.Error != nil {
+		ex.BadRequest(c, result.Error)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "success"})
+}
+
+// files controllers
+func createUserFiles(c *gin.Context) {
+	userID := c.Param("userID")
+
+	// get single file from formdata
+	file, err := c.FormFile("file")
+	if err != nil {
+		ex.BadRequest(c, err)
+		return
+	}
+
+	// get user
+	var user models.User
+	result := config.Db.Preload("UserSpace").First(&user, userID)
+	if result.Error != nil {
+		ex.BadRequest(c, result.Error)
+		return
+	}
+
+	if user.StorageSize <= 0 {
+		ex.StorageFull(c)
+		return
+	}
+
+	// upload file
+	destPath := filepath.Join(user.UserSpace.Path, file.Filename)
+	err = c.SaveUploadedFile(file, destPath)
+	if err != nil {
+		ex.BadRequest(c, err)
+		return
+	}
+
+	user.StorageSize -= int(file.Size)
+	// Save the updated user object
+	update := config.Db.Save(&user)
+	if update.Error != nil {
+		ex.BadRequest(c, update.Error)
+		return
+	}
+
+	// save file data to db
+	newFile := models.NewFile(file.Filename, user.UserSpace.Path+file.Filename, file.Header.Get("Content-Type"), int(file.Size), user.UserSpace.ID)
+	result = config.Db.Create(newFile)
 	if result.Error != nil {
 		ex.BadRequest(c, result.Error)
 		return

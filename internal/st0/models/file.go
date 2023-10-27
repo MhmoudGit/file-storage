@@ -12,3 +12,13 @@ type File struct {
 	Type      string `gorm:"not null" json:"type"`
 	StorageID int    `gorm:"not null" json:"storageID"`
 }
+
+func NewFile(name, path, filetype string, size, storageID int) *File {
+	return &File{
+		Name:      name,
+		Size:      size,
+		Path:      path,
+		Type:      filetype,
+		StorageID: storageID,
+	}
+}
