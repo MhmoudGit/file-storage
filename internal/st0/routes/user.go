@@ -12,17 +12,18 @@ import (
 
 func UsersRoutes(r *gin.Engine) {
 	users := r.Group("/users")
-	users.GET(":id", getUser)
+	users.GET(":userID", getUser)
 	users.POST("", createUser)
-	users.DELETE(":id", deleteUser)
+	users.DELETE(":userID", deleteUser)
 
 	// files
 	users.POST(":userID/files", createUserFiles)
+	users.DELETE(":userID/files/:fileID", deleteUserFiles)
 }
 
 // users controllers
 func getUser(c *gin.Context) {
-	userID := c.Param("id")
+	userID := c.Param("userID")
 	var user models.User
 	result := config.Db.Preload("UserSpace").First(&user, userID)
 	if result.Error != nil {
@@ -54,7 +55,7 @@ func createUser(c *gin.Context) {
 }
 
 func deleteUser(c *gin.Context) {
-	userID := c.Param("id")
+	userID := c.Param("userID")
 	var user models.User
 	data := config.Db.Preload("UserSpace").First(&user, userID)
 	if data.Error != nil {
@@ -100,6 +101,12 @@ func createUserFiles(c *gin.Context) {
 
 	// upload file
 	destPath := filepath.Join(user.UserSpace.Path, file.Filename)
+	fileExists := models.FileExists(destPath)
+	if fileExists {
+		ex.FileExists(c)
+		return
+	}
+
 	err = c.SaveUploadedFile(file, destPath)
 	if err != nil {
 		ex.BadRequest(c, err)
@@ -121,5 +128,51 @@ func createUserFiles(c *gin.Context) {
 		ex.BadRequest(c, result.Error)
 		return
 	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "success"})
+}
+
+// files controllers
+func deleteUserFiles(c *gin.Context) {
+	userID := c.Param("userID")
+	fileID := c.Param("fileID")
+
+	// get user
+	var user models.User
+	result := config.Db.Preload("UserSpace").First(&user, userID)
+	if result.Error != nil {
+		ex.BadRequest(c, result.Error)
+		return
+	}
+
+	// get file from db
+	var file models.File
+	result = config.Db.First(&file, fileID)
+	if result.Error != nil {
+		ex.BadRequest(c, result.Error)
+		return
+	}
+
+	// delete file from server
+	err := user.DeleteFile(file.Name)
+	if err != nil {
+		ex.BadRequest(c, err)
+		return
+	}
+
+	user.StorageSize += int(file.Size)
+	// Save the updated user object
+	update := config.Db.Save(&user)
+	if update.Error != nil {
+		ex.BadRequest(c, update.Error)
+		return
+	}
+
+	// delet file data to db
+	result = config.Db.Unscoped().Delete(&file, fileID)
+	if result.Error != nil {
+		ex.BadRequest(c, result.Error)
+		return
+	}
+
 	c.JSON(http.StatusAccepted, gin.H{"message": "success"})
 }

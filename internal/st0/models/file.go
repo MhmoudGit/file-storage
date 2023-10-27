@@ -1,6 +1,8 @@
 package models
 
 import (
+	"os"
+
 	"gorm.io/gorm"
 )
 
@@ -21,4 +23,9 @@ func NewFile(name, path, filetype string, size, storageID int) *File {
 		Type:      filetype,
 		StorageID: storageID,
 	}
+}
+
+func FileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	return err == nil
 }
